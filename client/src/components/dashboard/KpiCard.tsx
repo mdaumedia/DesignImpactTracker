@@ -104,7 +104,7 @@ export function KpiCard({
               />
             </div>
           )}
-          {chartType === "sparkline" && chartData && (
+          {chartType === "sparkline" && chartData && Array.isArray(chartData) && chartData.length > 0 && (
             <ResponsiveContainer width="100%" height={40}>
               <LineChart data={chartData.map(value => ({ value }))}>
                 <Line 
