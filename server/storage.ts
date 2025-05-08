@@ -8,7 +8,7 @@ type SummaryMetric = {
   value: number;
   change: number;
   trend: "up" | "down" | "none";
-  trend?: number[];
+  trendData?: number[];
 };
 
 type TimeSeriesData = {
@@ -27,6 +27,26 @@ type FeatureAdoptionData = {
   casualUsers: number;
   newUsers: number;
 }[];
+
+type MaturityDimension = {
+  name: string;
+  score: number;
+  fullMark: number;
+};
+
+type UsageData = {
+  department: string;
+  usage: number;
+  target: number;
+  color: string;
+};
+
+type AdoptionTrendData = {
+  date: string;
+  components: number;
+  patterns: number;
+  tokens: number;
+};
 
 type FeatureMetric = {
   id: string;
@@ -93,6 +113,11 @@ export interface IStorage {
   getFeatureMetrics(): Promise<FeatureMetric[]>;
   getUserFeedback(): Promise<FeedbackItem[]>;
   getDesignGoals(): Promise<GoalItem[]>;
+  
+  // Design system maturity, usage, and adoption methods
+  getDesignSystemMaturity(): Promise<MaturityDimension[]>;
+  getDesignSystemUsage(): Promise<UsageData[]>;
+  getAdoptionTrends(): Promise<AdoptionTrendData[]>;
   
   // Filtered metric queries
   getMetricsByFeature(featureId: string): Promise<DesignMetric[]>;
@@ -302,7 +327,7 @@ export class MemStorage implements IStorage {
       value: parseFloat(latestAvg.toFixed(1)),
       change: parseFloat(Math.abs(change).toFixed(1)),
       trend,
-      trend: trendData,
+      trendData,
     };
   }
 
@@ -629,6 +654,42 @@ export class MemStorage implements IStorage {
     
     this.userFeedback.set(id, newFeedback);
     return newFeedback;
+  }
+  
+  // Design system maturity, usage and adoption methods
+  async getDesignSystemMaturity(): Promise<MaturityDimension[]> {
+    // In a real implementation, this data would come from a database or API
+    return [
+      { name: "Component Coverage", score: 78, fullMark: 100 },
+      { name: "Documentation", score: 65, fullMark: 100 },
+      { name: "Governance", score: 82, fullMark: 100 },
+      { name: "Team Adoption", score: 75, fullMark: 100 },
+      { name: "Versioning", score: 87, fullMark: 100 },
+      { name: "Accessibility", score: 70, fullMark: 100 },
+    ];
+  }
+
+  async getDesignSystemUsage(): Promise<UsageData[]> {
+    // In a real implementation, this data would come from a database or API
+    return [
+      { department: "UX Team", usage: 92, target: 90, color: "#6366f1" },
+      { department: "Frontend", usage: 85, target: 80, color: "#22c55e" },
+      { department: "Mobile", usage: 68, target: 75, color: "#f59e0b" },
+      { department: "Marketing", usage: 45, target: 60, color: "#ef4444" },
+      { department: "Internal Tools", usage: 78, target: 70, color: "#8b5cf6" },
+    ];
+  }
+
+  async getAdoptionTrends(): Promise<AdoptionTrendData[]> {
+    // In a real implementation, this data would be derived from metrics or come from a database
+    return [
+      { date: "Q1 2023", components: 45, patterns: 30, tokens: 65 },
+      { date: "Q2 2023", components: 58, patterns: 42, tokens: 78 },
+      { date: "Q3 2023", components: 67, patterns: 55, tokens: 85 },
+      { date: "Q4 2023", components: 73, patterns: 65, tokens: 92 },
+      { date: "Q1 2024", components: 79, patterns: 72, tokens: 95 },
+      { date: "Q2 2024", components: 85, patterns: 78, tokens: 98 },
+    ];
   }
   
   // Helper function to format time ago

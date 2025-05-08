@@ -24,6 +24,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const feedback = await storage.getUserFeedback();
       const goals = await storage.getDesignGoals();
       
+      // Get design system maturity, usage, and adoption data
+      const maturityDimensions = await storage.getDesignSystemMaturity();
+      const usageByDepartment = await storage.getDesignSystemUsage();
+      const adoptionTrends = await storage.getAdoptionTrends();
+      
       // Return compiled dashboard data
       res.json({
         impactScore,
@@ -35,7 +40,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         featureAdoption,
         featureMetrics,
         feedback,
-        goals
+        goals,
+        maturityDimensions,
+        usageByDepartment,
+        adoptionTrends
       });
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -94,6 +102,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching design goals:", error);
       res.status(500).json({ message: "Failed to load design goals" });
+    }
+  });
+  
+  // Get design system maturity data
+  app.get("/api/design-system/maturity", async (req, res) => {
+    try {
+      const maturityData = await storage.getDesignSystemMaturity();
+      res.json(maturityData);
+    } catch (error) {
+      console.error("Error fetching design system maturity data:", error);
+      res.status(500).json({ message: "Failed to load design system maturity data" });
+    }
+  });
+  
+  // Get design system usage by department
+  app.get("/api/design-system/usage", async (req, res) => {
+    try {
+      const usageData = await storage.getDesignSystemUsage();
+      res.json(usageData);
+    } catch (error) {
+      console.error("Error fetching design system usage data:", error);
+      res.status(500).json({ message: "Failed to load design system usage data" });
+    }
+  });
+  
+  // Get design system adoption trends
+  app.get("/api/design-system/adoption-trends", async (req, res) => {
+    try {
+      const trendData = await storage.getAdoptionTrends();
+      res.json(trendData);
+    } catch (error) {
+      console.error("Error fetching design system adoption trends:", error);
+      res.status(500).json({ message: "Failed to load design system adoption trends" });
     }
   });
 
