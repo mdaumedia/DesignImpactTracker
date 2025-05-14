@@ -128,6 +128,27 @@ export interface IStorage {
   createMetric(metric: InsertDesignMetric): Promise<DesignMetric>;
   createGoal(goal: InsertGoal): Promise<Goal>;
   createFeedback(feedbackItem: InsertFeedback): Promise<Feedback>;
+  
+  // Advanced Features - AI-powered design insights
+  getDesignInsights(): Promise<any[]>; // Using any temporarily until we define a proper type
+  createDesignInsight(insight: any): Promise<any>;
+  updateDesignInsight(id: string, updates: { pinned?: boolean; seen?: boolean }): Promise<any>;
+  
+  // Advanced Features - Data source connections
+  getDataConnections(): Promise<any[]>;
+  createDataConnection(connection: any): Promise<any>;
+  syncDataConnection(id: string): Promise<any>;
+  
+  // Advanced Features - Gamification
+  getUserAchievements(userId: number): Promise<any[]>;
+  getLeaderboard(): Promise<any[]>;
+  getUserLevel(userId: number): Promise<number>;
+  getUserPoints(userId: number): Promise<number>;
+  getPointsToNextLevel(userId: number): Promise<number>;
+  
+  // Advanced Features - Dashboard customization
+  getDashboardLayout(userId: number): Promise<any>;
+  saveDashboardLayout(userId: number, layout: any): Promise<any>;
 }
 
 // For backward compatibility and development purposes
