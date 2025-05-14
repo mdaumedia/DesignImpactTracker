@@ -40,8 +40,21 @@ export default function Dashboard() {
   // Data Sources Dialog state
   const [isDataSourcesDialogOpen, setIsDataSourcesDialogOpen] = React.useState(false);
   
+  // Define the type for DesignInsight
+  type DesignInsight = {
+    id: string;
+    title: string;
+    description: string;
+    type: "trend" | "anomaly" | "recommendation" | "prediction";
+    confidence: number;
+    relatedFeatures: string[];
+    generatedAt: string;
+    pinned: boolean;
+    seen: boolean;
+  };
+  
   // Insights state
-  const [insights, setInsights] = React.useState([
+  const [insights, setInsights] = React.useState<DesignInsight[]>([
     {
       id: "1",
       title: "Adoption trend detected in Dashboard component",
@@ -77,8 +90,19 @@ export default function Dashboard() {
     }
   ]);
   
+  // Type for Achievement data
+  type AchievementData = {
+    id: string;
+    name: string;
+    description: string;
+    iconName: string;
+    points: number;
+    earned: boolean;
+    progress?: number;
+  };
+  
   // Gamification state
-  const [achievements, setAchievements] = React.useState([
+  const [achievements, setAchievements] = React.useState<AchievementData[]>([
     {
       id: "1",
       name: "Design System Pioneer",
@@ -117,7 +141,19 @@ export default function Dashboard() {
     }
   ]);
   
-  const [leaderboard, setLeaderboard] = React.useState([
+  // Define the type for LeaderboardEntry 
+  type LeaderboardEntry = {
+    id: string;
+    username: string;
+    avatar: string;
+    level: number;
+    points: number;
+    streak: number;
+    position: number;
+    trend: "up" | "down" | "none";
+  };
+
+  const [leaderboard, setLeaderboard] = React.useState<LeaderboardEntry[]>([
     {
       id: "1",
       username: "alex.designer",

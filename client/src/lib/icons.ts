@@ -44,3 +44,6 @@ export const Star = createIcon("star");
 // Payments & Finance Icons
 export const Payments = createIcon("payments");
 export const AccountBalance = createIcon("account_balance");
+
+// Data & System Icons
+export const Database = createIcon("storage");
