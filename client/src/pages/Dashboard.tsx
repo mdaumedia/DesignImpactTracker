@@ -10,11 +10,17 @@ import { FeatureAdoptionChart } from "@/components/dashboard/FeatureAdoptionChar
 import { FeedbackWidget } from "@/components/dashboard/FeedbackWidget";
 import { MetricsTable } from "@/components/dashboard/MetricsTable";
 import { GoalsWidget } from "@/components/dashboard/GoalsWidget";
+import { GamificationWidget } from "@/components/dashboard/GamificationWidget";
+import { DesignInsightsWidget } from "@/components/dashboard/DesignInsightsWidget";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { DataSourceWizard } from "@/components/wizard/DataSourceWizard";
+import { Button } from "@/components/ui/button";
 import {
   QueryStats,
   TrendingUp,
   Speed,
   ThumbsUp,
+  Database,
 } from "@/lib/icons";
 
 // Dashboard Page
@@ -30,6 +36,129 @@ export default function Dashboard() {
     platform: "all",
     metricType: "all",
   });
+  
+  // Data Sources Dialog state
+  const [isDataSourcesDialogOpen, setIsDataSourcesDialogOpen] = React.useState(false);
+  
+  // Insights state
+  const [insights, setInsights] = React.useState([
+    {
+      id: "1",
+      title: "Adoption trend detected in Dashboard component",
+      description: "Dashboard component adoption has increased by 32% over the last month, correlating with improved user retention metrics.",
+      type: "trend",
+      confidence: 89,
+      relatedFeatures: ["Dashboard", "User Analytics"],
+      generatedAt: new Date().toISOString(),
+      pinned: false,
+      seen: true
+    },
+    {
+      id: "2", 
+      title: "Usability issue in Payment Flow",
+      description: "Users are spending 40% more time on the payment confirmation screen compared to industry benchmarks. Consider simplifying this screen.",
+      type: "anomaly",
+      confidence: 76,
+      relatedFeatures: ["Payments"],
+      generatedAt: new Date().toISOString(),
+      pinned: true,
+      seen: true
+    },
+    {
+      id: "3",
+      title: "Consider unifying button styles across Accounts section",
+      description: "Analysis shows inconsistent button styling in the Accounts section may be impacting user confidence. Standardizing would improve UX metrics.",
+      type: "recommendation",
+      confidence: 82,
+      relatedFeatures: ["Accounts", "Design System"],
+      generatedAt: new Date().toISOString(),
+      pinned: false,
+      seen: false
+    }
+  ]);
+  
+  // Gamification state
+  const [achievements, setAchievements] = React.useState([
+    {
+      id: "1",
+      name: "Design System Pioneer",
+      description: "Created 5 components in the design system",
+      iconName: "trophy",
+      points: 100,
+      earned: true,
+      progress: 100
+    },
+    {
+      id: "2",
+      name: "Pattern Master",
+      description: "Applied design patterns consistently across 10 features",
+      iconName: "award",
+      points: 150,
+      earned: false,
+      progress: 60
+    },
+    {
+      id: "3",
+      name: "Impact Analyst",
+      description: "Tracked and improved metrics for 3 features",
+      iconName: "trending_up",
+      points: 200,
+      earned: true,
+      progress: 100
+    },
+    {
+      id: "4",
+      name: "Collaboration Champion",
+      description: "Worked with 5 different teams on design projects",
+      iconName: "star",
+      points: 250,
+      earned: false,
+      progress: 40
+    }
+  ]);
+  
+  const [leaderboard, setLeaderboard] = React.useState([
+    {
+      id: "1",
+      username: "alex.designer",
+      avatar: "AD",
+      level: 12,
+      points: 780,
+      streak: 15,
+      position: 1,
+      trend: "up"
+    },
+    {
+      id: "current", // Marking the current user
+      username: "sarah.smith",
+      avatar: "SS",
+      level: 8,
+      points: 560,
+      streak: 8,
+      position: 2,
+      trend: "up"
+    },
+    {
+      id: "3",
+      username: "mike.jackson",
+      avatar: "MJ",
+      level: 7,
+      points: 480,
+      streak: 3,
+      position: 3,
+      trend: "down"
+    },
+    {
+      id: "4",
+      username: "lisa.chen",
+      avatar: "LC",
+      level: 6,
+      points: 390,
+      streak: 6,
+      position: 4,
+      trend: "none"
+    }
+  ]);
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
@@ -37,6 +166,28 @@ export default function Dashboard() {
 
   const handleTimeRangeChange = (range: string) => {
     setTimeRange(range);
+  };
+  
+  const handlePinInsight = (id: string, pinned: boolean) => {
+    setInsights(prev => 
+      prev.map(insight => 
+        insight.id === id ? { ...insight, pinned } : insight
+      )
+    );
+  };
+  
+  const handleMarkInsightAsSeen = (id: string) => {
+    setInsights(prev => 
+      prev.map(insight => 
+        insight.id === id ? { ...insight, seen: true } : insight
+      )
+    );
+  };
+  
+  const handleSaveDataSource = async (sourceType: string, connectionData: Record<string, any>) => {
+    console.log("Saving data source:", sourceType, connectionData);
+    // Would typically make an API call here
+    setIsDataSourcesDialogOpen(false);
   };
 
   return (
@@ -219,7 +370,7 @@ export default function Dashboard() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <MetricsTable
               title="Design Metrics by Feature"
               data={dashboardData?.featureMetrics || []}
@@ -233,8 +384,55 @@ export default function Dashboard() {
               isLoading={isLoading}
             />
           </div>
+          
+          {/* Advanced Features Section */}
+          <div className="border-t border-slate-200 pt-6 mt-2">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-display font-bold text-slate-800">
+                Advanced Features
+              </h2>
+              <Button 
+                variant="outline" 
+                className="flex items-center" 
+                onClick={() => setIsDataSourcesDialogOpen(true)}
+              >
+                <Database className="w-4 h-4 mr-2" />
+                Connect Data Source
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <DesignInsightsWidget
+                title="AI-Powered Design Insights"
+                insights={insights}
+                isLoading={false}
+                onPinInsight={handlePinInsight}
+                onMarkAsSeen={handleMarkInsightAsSeen}
+              />
+              
+              <GamificationWidget
+                title="Design Performance Gamification"
+                userLevel={8}
+                userPoints={560}
+                pointsToNextLevel={140}
+                achievements={achievements}
+                leaderboard={leaderboard}
+                isLoading={false}
+              />
+            </div>
+          </div>
         </main>
       </div>
+      
+      {/* Data Source Connection Dialog */}
+      <Dialog open={isDataSourcesDialogOpen} onOpenChange={setIsDataSourcesDialogOpen}>
+        <DialogContent className="sm:max-w-4xl">
+          <DataSourceWizard
+            onClose={() => setIsDataSourcesDialogOpen(false)}
+            onSave={handleSaveDataSource}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,8 +1,16 @@
 import {
   users, features, designMetrics, goals, feedback,
+  achievements, userAchievements, leaderboard,
+  dataConnections, dataImportLogs, designInsights, dashboardLayouts,
   type User, type Feature, type DesignMetric, type Goal, type Feedback,
-  type InsertUser, type InsertFeature, type InsertDesignMetric, type InsertGoal, type InsertFeedback
+  type Achievement, type UserAchievement, type Leaderboard,
+  type DataConnection, type DataImportLog, type DesignInsight, type DashboardLayout,
+  type InsertUser, type InsertFeature, type InsertDesignMetric, type InsertGoal, type InsertFeedback,
+  type InsertAchievement, type InsertUserAchievement, type InsertLeaderboard,
+  type InsertDataConnection, type InsertDataImportLog, type InsertDesignInsight, type InsertDashboardLayout
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 type SummaryMetric = {
   value: number;
@@ -151,14 +159,13 @@ export interface IStorage {
   saveDashboardLayout(userId: number, layout: any): Promise<any>;
 }
 
-// For backward compatibility and development purposes
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private features: Map<number, Feature>;
   private designMetrics: Map<number, DesignMetric>;
   private designGoals: Map<number, Goal>;
   private userFeedback: Map<number, Feedback>;
-  
+
   private currentUserId: number;
   private currentFeatureId: number;
   private currentMetricId: number;
@@ -171,134 +178,32 @@ export class MemStorage implements IStorage {
     this.designMetrics = new Map();
     this.designGoals = new Map();
     this.userFeedback = new Map();
-    
+
     this.currentUserId = 1;
     this.currentFeatureId = 1;
     this.currentMetricId = 1;
     this.currentGoalId = 1;
     this.currentFeedbackId = 1;
-    
-    // Initialize with sample data
+
     this.initializeSampleData();
   }
-  
+
   private initializeSampleData() {
-    // Create sample features
-    const featuresData: InsertFeature[] = [
-      { name: "Payments", description: "Payment processing and management", iconName: "payments" },
-      { name: "Accounts", description: "Account management and settings", iconName: "account_balance" },
-      { name: "Investments", description: "Investment portfolios and tracking", iconName: "trending_up" },
-      { name: "Dashboard", description: "User dashboard and analytics", iconName: "dashboard" },
-    ];
-    
-    featuresData.forEach(feature => this.createFeature(feature));
-    
-    // Create sample metrics for each feature
-    const metricTypes = ["impact_score", "design_velocity", "adoption_rate", "usability_score"];
-    const userSegments = ["power", "casual", "new"];
-    const platforms = ["web", "ios", "android"];
-    
-    // Generate metrics for the last 6 months
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 6);
-    
-    // Generate sample metrics
-    for (let feature = 1; feature <= 4; feature++) {
-      for (let i = 0; i < 6; i++) {
-        const date = new Date(startDate);
-        date.setMonth(date.getMonth() + i);
-        
-        for (const metricType of metricTypes) {
-          // Base value that improves over time
-          let baseValue = 0;
-          switch (metricType) {
-            case "impact_score":
-              baseValue = 75 + i * 2 + Math.random() * 5;
-              break;
-            case "design_velocity":
-              baseValue = 6 - i * 0.4 + Math.random() * 1; // Lower is better
-              break;
-            case "adoption_rate":
-              baseValue = 60 + i * 3 + Math.random() * 5;
-              break;
-            case "usability_score":
-              baseValue = 82 + i * 2 + Math.random() * 3;
-              break;
-          }
-          
-          // Add metrics for different segments and platforms
-          for (const segment of userSegments) {
-            for (const platform of platforms) {
-              const segmentFactor = segment === "power" ? 1.1 : segment === "casual" ? 1.0 : 0.9;
-              const platformFactor = platform === "web" ? 1.05 : platform === "ios" ? 1.0 : 0.95;
-              
-              const adjustedValue = baseValue * segmentFactor * platformFactor;
-              
-              this.createMetric({
-                metricName: metricType,
-                metricValue: adjustedValue,
-                recordedAt: date,
-                featureId: feature.toString(),
-                userSegment: segment,
-                platformType: platform
-              });
-            }
-          }
-        }
-      }
-    }
-    
-    // Create sample goals
-    const goalsData: InsertGoal[] = [
-      { name: "Design System Adoption", currentValue: 76, targetValue: 80, unit: "%", color: "primary" },
-      { name: "Design Velocity", currentValue: 3.8, targetValue: 3.0, unit: "days", color: "amber" },
-      { name: "Usability Score", currentValue: 92.7, targetValue: 90, unit: "", color: "secondary" },
-      { name: "Component Reuse", currentValue: 68, targetValue: 75, unit: "%", color: "primary" },
-      { name: "Design Consistency", currentValue: 89, targetValue: 95, unit: "%", color: "amber" },
-    ];
-    
-    goalsData.forEach(goal => this.createGoal(goal));
-    
-    // Create sample feedback
-    const feedbackData: InsertFeedback[] = [
-      {
-        userInitials: "MS", 
-        userColorClass: "bg-amber-100 text-amber-700",
-        content: "New dashboard is much cleaner!",
-        description: "The layout makes it easier to find what I need quickly.",
-        rating: 5,
-        featureId: 1,
-      },
-      {
-        userInitials: "AK", 
-        userColorClass: "bg-primary-100 text-primary-700",
-        content: "Transaction list is more readable",
-        description: "The new typography makes scanning much faster.",
-        rating: 4,
-        featureId: 2,
-      },
-      {
-        userInitials: "DP", 
-        userColorClass: "bg-secondary-100 text-secondary-700",
-        content: "Investment charts are intuitive",
-        description: "I can understand my portfolio performance at a glance now.",
-        rating: 5,
-        featureId: 3,
-      },
-    ];
-    
-    feedbackData.forEach(item => this.createFeedback(item));
+    // Sample user
+    this.users.set(1, {
+      id: 1,
+      username: "admin",
+      password: "password123", // Never do this in production!
+    });
   }
-  
-  // User management methods (from existing storage)
+
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+      (user) => user.username === username
     );
   }
 
@@ -308,434 +213,607 @@ export class MemStorage implements IStorage {
     this.users.set(id, user);
     return user;
   }
-  
-  // Design dashboard specific methods
+
   async getSummaryMetric(metricName: string): Promise<SummaryMetric> {
-    // Derive the latest metric value and change
-    const metrics = Array.from(this.designMetrics.values())
-      .filter(m => m.metricName === metricName)
-      .sort((a, b) => {
-        return new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime();
-      });
-    
-    // Calculate average for latest month
-    const latestMonth = new Date(metrics[0].recordedAt).getMonth();
-    const latestMetrics = metrics.filter(m => new Date(m.recordedAt).getMonth() === latestMonth);
-    const latestAvg = latestMetrics.reduce((sum, m) => sum + m.metricValue, 0) / latestMetrics.length;
-    
-    // Calculate average for previous month
-    const previousMonth = latestMonth === 0 ? 11 : latestMonth - 1;
-    const previousMetrics = metrics.filter(m => new Date(m.recordedAt).getMonth() === previousMonth);
-    const previousAvg = previousMetrics.length > 0 
-      ? previousMetrics.reduce((sum, m) => sum + m.metricValue, 0) / previousMetrics.length
-      : latestAvg * 0.9; // fallback
-    
-    // Calculate change percentage
-    let change = ((latestAvg - previousAvg) / previousAvg) * 100;
-    // For design_velocity, lower is better, so invert the change
-    if (metricName === "design_velocity") {
-      change = -change;
-    }
-    
-    // Get trend direction
-    const trend = change > 0 ? "up" : change < 0 ? "down" : "none";
-    
-    // Prepare trend data for charts if needed
-    const trendData = metricName === "design_velocity" || metricName === "usability_score"
-      ? metrics.slice(0, 6).map(m => m.metricValue).reverse()
-      : undefined;
-    
-    return {
-      value: parseFloat(latestAvg.toFixed(1)),
-      change: parseFloat(Math.abs(change).toFixed(1)),
-      trend,
-      trendData,
+    // Mock data for different metrics
+    const mockData: Record<string, SummaryMetric> = {
+      velocity: {
+        value: 32,
+        change: 15,
+        trend: "up",
+        trendData: [25, 27, 28, 30, 32]
+      },
+      adoption: {
+        value: 78,
+        change: -5,
+        trend: "down",
+        trendData: [85, 83, 80, 79, 78]
+      },
+      usability: {
+        value: 92,
+        change: 8,
+        trend: "up",
+        trendData: [84, 86, 88, 90, 92]
+      }
+    };
+
+    return mockData[metricName] || {
+      value: 0,
+      change: 0,
+      trend: "none",
+      trendData: [0, 0, 0, 0, 0]
     };
   }
 
   async getTimeSeriesData(metricName: string): Promise<TimeSeriesData> {
-    const metrics = Array.from(this.designMetrics.values())
-      .filter(m => m.metricName === metricName)
-      .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
-    
-    // Group by month and average
-    const monthlyData = new Map<string, number[]>();
-    
-    metrics.forEach(metric => {
-      const date = new Date(metric.recordedAt);
-      const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-      
-      if (!monthlyData.has(monthKey)) {
-        monthlyData.set(monthKey, []);
-      }
-      
-      monthlyData.get(monthKey)!.push(metric.metricValue);
+    // Mock data for different metrics
+    const today = new Date();
+    const dates = Array.from({ length: 30 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - (29 - i));
+      return date.toISOString().split('T')[0];
     });
-    
-    // Convert to array of {date, value} objects
-    return Array.from(monthlyData.entries())
-      .map(([monthKey, values]) => {
-        const [year, month] = monthKey.split('-').map(Number);
-        const date = new Date(year, month - 1).toLocaleString('default', { month: 'short' });
-        const value = values.reduce((sum, val) => sum + val, 0) / values.length;
-        
-        return {
-          date,
-          value: parseFloat(value.toFixed(1))
-        };
-      })
-      .sort((a, b) => {
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return months.indexOf(a.date) - months.indexOf(b.date);
-      });
+
+    const mockData: Record<string, TimeSeriesData> = {
+      velocityTrend: dates.map((date, i) => ({
+        date,
+        value: 20 + Math.floor(Math.random() * 20) + i * 0.5
+      }))
+    };
+
+    return mockData[metricName] || dates.map(date => ({ date, value: 0 }));
   }
 
   async getCorrelationData(metric1: string, metric2: string): Promise<CorrelationData> {
-    // Group metrics by feature and month to correlate them
-    const metricPairs = new Map<string, { m1: number[], m2: number[] }>();
-    
-    const metric1Data = Array.from(this.designMetrics.values())
-      .filter(m => m.metricName === metric1);
-    
-    const metric2Data = Array.from(this.designMetrics.values())
-      .filter(m => m.metricName === metric2);
-    
-    // For this example, we'll create synthetic data since we don't have user_retention
-    // This would typically come from another data source
-    return [
-      { designQuality: 72, retention: 64 },
-      { designQuality: 76, retention: 69 },
-      { designQuality: 78, retention: 68 },
-      { designQuality: 81, retention: 74 },
-      { designQuality: 83, retention: 76 },
-      { designQuality: 85, retention: 78 },
-      { designQuality: 87, retention: 82 },
-      { designQuality: 89, retention: 85 },
-      { designQuality: 92, retention: 87 },
-    ];
+    // Mock correlation data between impact score and retention
+    const mockData: Record<string, CorrelationData> = {
+      impactRetentionCorrelation: Array.from({ length: 20 }, () => ({
+        designQuality: 60 + Math.floor(Math.random() * 30),
+        retention: 65 + Math.floor(Math.random() * 25)
+      }))
+    };
+
+    return mockData[`${metric1}${metric2}Correlation`] || [];
   }
 
   async getFeatureAdoptionByPersona(): Promise<FeatureAdoptionData> {
-    const results: FeatureAdoptionData = [];
-    
-    // Get all features
-    const allFeatures = Array.from(this.features.values());
-    
-    // Get adoption metrics
-    const adoptionMetrics = Array.from(this.designMetrics.values())
-      .filter(m => m.metricName === "adoption_rate");
-    
-    // Group by feature and persona
-    allFeatures.forEach(feature => {
-      const featureMetrics = adoptionMetrics.filter(m => m.featureId === feature.id.toString());
-      
-      // Get latest metrics for each persona
-      const latest = new Map<string, DesignMetric[]>();
-      
-      featureMetrics.forEach(metric => {
-        const segment = metric.userSegment || "unknown";
-        
-        if (!latest.has(segment)) {
-          latest.set(segment, []);
-        }
-        
-        latest.get(segment)!.push(metric);
-      });
-      
-      // Calculate average for each persona
-      const powerUsers = latest.has("power") 
-        ? latest.get("power")!.reduce((sum, m) => sum + m.metricValue, 0) / latest.get("power")!.length
-        : 0;
-        
-      const casualUsers = latest.has("casual") 
-        ? latest.get("casual")!.reduce((sum, m) => sum + m.metricValue, 0) / latest.get("casual")!.length
-        : 0;
-        
-      const newUsers = latest.has("new") 
-        ? latest.get("new")!.reduce((sum, m) => sum + m.metricValue, 0) / latest.get("new")!.length
-        : 0;
-      
-      results.push({
-        feature: feature.name,
-        powerUsers: Math.round(powerUsers),
-        casualUsers: Math.round(casualUsers),
-        newUsers: Math.round(newUsers)
-      });
-    });
-    
-    return results;
+    // Mock feature adoption data by user persona
+    const mockData: Record<string, FeatureAdoptionData> = {
+      featureAdoption: [
+        { feature: "Dashboard", powerUsers: 85, casualUsers: 62, newUsers: 38 },
+        { feature: "Analytics Charts", powerUsers: 92, casualUsers: 45, newUsers: 22 },
+        { feature: "Payment Flow", powerUsers: 78, casualUsers: 68, newUsers: 52 },
+        { feature: "Accounts", powerUsers: 95, casualUsers: 72, newUsers: 60 },
+        { feature: "Mobile Nav", powerUsers: 65, casualUsers: 58, newUsers: 42 }
+      ]
+    };
+
+    return mockData.featureAdoption || [];
   }
 
   async getFeatureMetrics(): Promise<FeatureMetric[]> {
-    const results: FeatureMetric[] = [];
-    
-    // Get all features
-    const allFeatures = Array.from(this.features.values());
-    
-    for (const feature of allFeatures) {
-      // Get metrics for this feature
-      const featureMetrics = Array.from(this.designMetrics.values())
-        .filter(m => m.featureId === feature.id.toString());
-      
-      // Group metrics by type and get latest values
-      const metricsByType = new Map<string, DesignMetric[]>();
-      
-      featureMetrics.forEach(metric => {
-        if (!metricsByType.has(metric.metricName)) {
-          metricsByType.set(metric.metricName, []);
-        }
-        
-        metricsByType.get(metric.metricName)!.push(metric);
-      });
-      
-      // Calculate latest values and changes
-      const getLatestAndChange = (metricName: string): { value: number; change: number; trend: "up" | "down" | "none" } => {
-        if (!metricsByType.has(metricName)) {
-          return { value: 0, change: 0, trend: "none" };
-        }
-        
-        const metrics = metricsByType.get(metricName)!
-          .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
-        
-        // Calculate average for latest month
-        const latestMonth = new Date(metrics[0].recordedAt).getMonth();
-        const latestMetrics = metrics.filter(m => new Date(m.recordedAt).getMonth() === latestMonth);
-        const latestAvg = latestMetrics.reduce((sum, m) => sum + m.metricValue, 0) / latestMetrics.length;
-        
-        // Calculate average for previous month
-        const previousMonth = latestMonth === 0 ? 11 : latestMonth - 1;
-        const previousMetrics = metrics.filter(m => new Date(m.recordedAt).getMonth() === previousMonth);
-        const previousAvg = previousMetrics.length > 0 
-          ? previousMetrics.reduce((sum, m) => sum + m.metricValue, 0) / previousMetrics.length
-          : latestAvg * 0.9; // fallback
-        
-        // Calculate change percentage
-        let change = ((latestAvg - previousAvg) / previousAvg) * 100;
-        
-        // For design_velocity, lower is better, so invert the trend
-        let trend: "up" | "down" | "none";
-        if (metricName === "design_velocity") {
-          trend = change < 0 ? "up" : change > 0 ? "down" : "none";
-        } else {
-          trend = change > 0 ? "up" : change < 0 ? "down" : "none";
-        }
-        
-        return { 
-          value: parseFloat(latestAvg.toFixed(1)), 
-          change: parseFloat(Math.abs(change).toFixed(1)), 
-          trend 
-        };
-      };
-      
-      const impactScore = getLatestAndChange("impact_score");
-      const adoptionRate = getLatestAndChange("adoption_rate");
-      const designVelocity = getLatestAndChange("design_velocity");
-      const usabilityScore = getLatestAndChange("usability_score");
-      
-      results.push({
-        id: feature.id.toString(),
+    // Mock feature metrics
+    return [
+      {
+        id: "1",
         feature: {
-          name: feature.name,
-          icon: feature.iconName || "extension",
-          lastUpdated: this.timeAgo(new Date(feature.lastUpdated!))
+          name: "Dashboard Component",
+          icon: "dashboard",
+          lastUpdated: "2 days ago"
         },
-        impactScore,
-        adoptionRate,
+        impactScore: {
+          value: 9.2,
+          change: 1.8,
+          trend: "up"
+        },
+        adoptionRate: {
+          value: 84,
+          change: 12,
+          trend: "up"
+        },
         timeToDesign: {
-          value: `${designVelocity.value} days`,
-          change: designVelocity.change,
-          trend: designVelocity.trend
+          value: "3.2 days",
+          change: -0.8,
+          trend: "down" // down is good for time metrics
         },
-        usabilityScore
-      });
-    }
-    
-    return results;
+        usabilityScore: {
+          value: 92,
+          change: 8,
+          trend: "up"
+        }
+      },
+      {
+        id: "2",
+        feature: {
+          name: "Payment Flow",
+          icon: "payments",
+          lastUpdated: "5 days ago"
+        },
+        impactScore: {
+          value: 9.5,
+          change: 0.5,
+          trend: "up"
+        },
+        adoptionRate: {
+          value: 72,
+          change: -3,
+          trend: "down"
+        },
+        timeToDesign: {
+          value: "5.8 days",
+          change: 1.2,
+          trend: "up" // up is bad for time metrics
+        },
+        usabilityScore: {
+          value: 84,
+          change: -2,
+          trend: "down"
+        }
+      },
+      {
+        id: "3",
+        feature: {
+          name: "Account Management",
+          icon: "account_balance",
+          lastUpdated: "1 week ago"
+        },
+        impactScore: {
+          value: 8.7,
+          change: 2.1,
+          trend: "up"
+        },
+        adoptionRate: {
+          value: 91,
+          change: 15,
+          trend: "up"
+        },
+        timeToDesign: {
+          value: "4.5 days",
+          change: -1.2,
+          trend: "down"
+        },
+        usabilityScore: {
+          value: 88,
+          change: 6,
+          trend: "up"
+        }
+      }
+    ];
   }
 
   async getUserFeedback(): Promise<FeedbackItem[]> {
-    const results: FeedbackItem[] = [];
-    
-    // Get all feedback items
-    const allFeedback = Array.from(this.userFeedback.values());
-    
-    // Sort by most recent
-    allFeedback.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
-    
-    // Map to the required format
-    for (const item of allFeedback) {
-      const feature = await this.getFeature(item.featureId);
-      
-      results.push({
-        id: item.id.toString(),
-        user: {
-          initials: item.userInitials,
-          color: item.userColorClass
-        },
-        content: item.content,
-        description: item.description || "",
-        rating: item.rating,
-        feature: feature ? `${feature.name} Feature` : "Unknown Feature"
-      });
-    }
-    
-    return results;
+    // Mock user feedback
+    return [
+      {
+        id: "1",
+        user: { initials: "JD", color: "bg-blue-500" },
+        content: "Dashboard is intuitive and shows the right metrics",
+        description: "User found the dashboard metrics valuable for decision making",
+        rating: 5,
+        feature: "Dashboard"
+      },
+      {
+        id: "2",
+        user: { initials: "AK", color: "bg-green-500" },
+        content: "Payment confirmation screen is confusing",
+        description: "User experienced issues with understanding the payment confirmation process",
+        rating: 2,
+        feature: "Payment Flow"
+      },
+      {
+        id: "3",
+        user: { initials: "MR", color: "bg-purple-500" },
+        content: "Account section is missing quick access to settings",
+        description: "User suggested adding a shortcut to frequently used settings",
+        rating: 3,
+        feature: "Account Management"
+      },
+      {
+        id: "4",
+        user: { initials: "LT", color: "bg-amber-500" },
+        content: "Love the new analytics visualizations",
+        description: "User found the data visualizations much more helpful than before",
+        rating: 5,
+        feature: "Analytics Charts"
+      }
+    ];
   }
 
   async getDesignGoals(): Promise<GoalItem[]> {
-    const results: GoalItem[] = [];
-    
-    // Get all goals
-    const allGoals = Array.from(this.designGoals.values());
-    
-    // Map to the required format
-    for (const goal of allGoals) {
-      const progress = Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100));
-      
-      results.push({
-        id: goal.id.toString(),
-        name: goal.name,
-        current: goal.currentValue,
-        target: goal.targetValue,
-        progress,
-        color: goal.color as "primary" | "secondary" | "amber",
-        unit: goal.unit
-      });
-    }
-    
-    return results;
+    // Mock design goals
+    return [
+      {
+        id: "1",
+        name: "Improve User Satisfaction",
+        current: 78,
+        target: 90,
+        progress: 78 / 90 * 100,
+        color: "primary",
+        unit: "%"
+      },
+      {
+        id: "2",
+        name: "Design System Adoption",
+        current: 65,
+        target: 85,
+        progress: 65 / 85 * 100,
+        color: "secondary",
+        unit: "%"
+      },
+      {
+        id: "3",
+        name: "Reduce Design Time",
+        current: 5.2,
+        target: 3,
+        progress: (1 - ((5.2 - 3) / 5.2)) * 100,
+        color: "amber",
+        unit: "days"
+      }
+    ];
   }
 
-  // Filtered queries
+  async getDesignSystemMaturity(): Promise<MaturityDimension[]> {
+    // Mock design system maturity radar chart data
+    return [
+      { name: "Components", score: 80, fullMark: 100 },
+      { name: "Patterns", score: 65, fullMark: 100 },
+      { name: "Documentation", score: 90, fullMark: 100 },
+      { name: "Processes", score: 70, fullMark: 100 },
+      { name: "Governance", score: 55, fullMark: 100 },
+      { name: "Adoption", score: 75, fullMark: 100 }
+    ];
+  }
+
+  async getDesignSystemUsage(): Promise<UsageData[]> {
+    // Mock design system usage data
+    return [
+      { department: "Product", usage: 85, target: 90, color: "#8884d8" },
+      { department: "Marketing", usage: 70, target: 80, color: "#83a6ed" },
+      { department: "Support", usage: 55, target: 75, color: "#8dd1e1" },
+      { department: "Mobile", usage: 90, target: 85, color: "#82ca9d" },
+      { department: "Internal Tools", usage: 40, target: 60, color: "#a4de6c" }
+    ];
+  }
+
+  async getAdoptionTrends(): Promise<AdoptionTrendData[]> {
+    // Mock adoption trends data
+    const today = new Date();
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const date = new Date(today);
+      date.setMonth(date.getMonth() - (5 - i));
+      return date.toISOString().split('T')[0].substring(0, 7); // YYYY-MM format
+    });
+
+    return months.map((date, i) => ({
+      date,
+      components: 30 + i * 8 + Math.floor(Math.random() * 5),
+      patterns: 15 + i * 5 + Math.floor(Math.random() * 3),
+      tokens: 45 + i * 10 + Math.floor(Math.random() * 8)
+    }));
+  }
+
   async getMetricsByFeature(featureId: string): Promise<DesignMetric[]> {
-    return Array.from(this.designMetrics.values())
-      .filter(m => m.featureId === featureId)
-      .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
+    return Array.from(this.designMetrics.values()).filter(
+      metric => metric.featureId === featureId
+    );
   }
 
   async getMetricsByTimeRange(startDate: string, endDate: string, metricType?: string): Promise<DesignMetric[]> {
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    return Array.from(this.designMetrics.values())
-      .filter(m => {
-        const recordDate = new Date(m.recordedAt);
-        return recordDate >= start && recordDate <= end && 
-          (!metricType || m.metricName === metricType);
-      })
-      .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
+    return Array.from(this.designMetrics.values()).filter(metric => {
+      const recordDate = new Date(metric.recordedAt);
+      const matchesTimeRange = recordDate >= start && recordDate <= end;
+      const matchesType = metricType ? metric.metricName.includes(metricType) : true;
+      return matchesTimeRange && matchesType;
+    });
   }
-  
-  // Data creation methods
+
   async getFeature(id: number): Promise<Feature | undefined> {
     return this.features.get(id);
   }
-  
+
   async createFeature(feature: InsertFeature): Promise<Feature> {
     const id = this.currentFeatureId++;
     const newFeature: Feature = {
-      ...feature,
       id,
-      lastUpdated: new Date()
+      name: feature.name,
+      description: feature.description ?? null,
+      iconName: feature.iconName ?? null,
+      lastUpdated: feature.lastUpdated ?? new Date(),
     };
-    
     this.features.set(id, newFeature);
     return newFeature;
   }
-  
+
   async createMetric(metric: InsertDesignMetric): Promise<DesignMetric> {
     const id = this.currentMetricId++;
     const newMetric: DesignMetric = {
-      ...metric,
-      id
+      id,
+      metricName: metric.metricName,
+      metricValue: metric.metricValue,
+      featureId: metric.featureId,
+      recordedAt: metric.recordedAt ?? new Date(),
+      userSegment: metric.userSegment ?? null,
+      platformType: metric.platformType ?? null,
     };
-    
     this.designMetrics.set(id, newMetric);
     return newMetric;
   }
-  
+
   async createGoal(goal: InsertGoal): Promise<Goal> {
     const id = this.currentGoalId++;
     const newGoal: Goal = {
-      ...goal,
       id,
-      createdAt: new Date()
+      name: goal.name,
+      currentValue: goal.currentValue,
+      targetValue: goal.targetValue,
+      createdAt: goal.createdAt ?? new Date(),
+      unit: goal.unit ?? null,
+      color: goal.color ?? null,
     };
-    
     this.designGoals.set(id, newGoal);
     return newGoal;
   }
-  
+
   async createFeedback(feedbackItem: InsertFeedback): Promise<Feedback> {
     const id = this.currentFeedbackId++;
     const newFeedback: Feedback = {
-      ...feedbackItem,
       id,
-      createdAt: new Date()
+      featureId: feedbackItem.featureId,
+      content: feedbackItem.content,
+      rating: feedbackItem.rating,
+      createdAt: feedbackItem.createdAt ?? new Date(),
+      userInitials: feedbackItem.userInitials,
+      userColorClass: feedbackItem.userColorClass ?? null,
+      description: feedbackItem.description ?? null,
     };
-    
     this.userFeedback.set(id, newFeedback);
     return newFeedback;
   }
-  
-  // Design system maturity, usage and adoption methods
-  async getDesignSystemMaturity(): Promise<MaturityDimension[]> {
-    // In a real implementation, this data would come from a database or API
+
+  async getDesignInsights(): Promise<any[]> {
+    // Mock design insights
     return [
-      { name: "Component Coverage", score: 78, fullMark: 100 },
-      { name: "Documentation", score: 65, fullMark: 100 },
-      { name: "Governance", score: 82, fullMark: 100 },
-      { name: "Team Adoption", score: 75, fullMark: 100 },
-      { name: "Versioning", score: 87, fullMark: 100 },
-      { name: "Accessibility", score: 70, fullMark: 100 },
+      {
+        id: "1",
+        title: "Adoption trend detected in Dashboard component",
+        description: "Dashboard component adoption has increased by 32% over the last month, correlating with improved user retention metrics.",
+        type: "trend",
+        confidence: 89,
+        relatedFeatures: ["Dashboard", "User Analytics"],
+        generatedAt: new Date().toISOString(),
+        pinned: false,
+        seen: true
+      },
+      {
+        id: "2",
+        title: "Usability issue in Payment Flow",
+        description: "Users are spending 40% more time on the payment confirmation screen compared to industry benchmarks. Consider simplifying this screen.",
+        type: "anomaly",
+        confidence: 76,
+        relatedFeatures: ["Payments"],
+        generatedAt: new Date().toISOString(),
+        pinned: true,
+        seen: true
+      },
+      {
+        id: "3",
+        title: "Consider unifying button styles across Accounts section",
+        description: "Analysis shows inconsistent button styling in the Accounts section may be impacting user confidence. Standardizing would improve UX metrics.",
+        type: "recommendation",
+        confidence: 82,
+        relatedFeatures: ["Accounts", "Design System"],
+        generatedAt: new Date().toISOString(),
+        pinned: false,
+        seen: false
+      }
     ];
   }
 
-  async getDesignSystemUsage(): Promise<UsageData[]> {
-    // In a real implementation, this data would come from a database or API
+  async createDesignInsight(insight: any): Promise<any> {
+    // In a real application, this would persist the insight to a database
+    return {
+      id: `insight-${Date.now()}`,
+      title: insight.title,
+      description: insight.description,
+      type: insight.type,
+      confidence: insight.confidence,
+      relatedFeatures: insight.relatedFeatures,
+      generatedAt: new Date().toISOString(),
+      pinned: false,
+      seen: false
+    };
+  }
+
+  async updateDesignInsight(id: string, updates: { pinned?: boolean; seen?: boolean }): Promise<any> {
+    // In a real application, this would update the insight in a database
+    return {
+      id,
+      title: "Mock Insight",
+      description: "This is a mock response for updating an insight",
+      type: "trend",
+      confidence: 80,
+      relatedFeatures: ["Design System"],
+      generatedAt: new Date().toISOString(),
+      pinned: updates.pinned ?? false,
+      seen: updates.seen ?? false
+    };
+  }
+
+  async getDataConnections(): Promise<any[]> {
+    // Mock data connections
     return [
-      { department: "UX Team", usage: 92, target: 90, color: "#6366f1" },
-      { department: "Frontend", usage: 85, target: 80, color: "#22c55e" },
-      { department: "Mobile", usage: 68, target: 75, color: "#f59e0b" },
-      { department: "Marketing", usage: 45, target: 60, color: "#ef4444" },
-      { department: "Internal Tools", usage: 78, target: 70, color: "#8b5cf6" },
+      {
+        id: "1",
+        name: "Figma Integration",
+        type: "figma",
+        status: "active",
+        lastSync: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        credentials: {
+          teamId: "team_xyz",
+          projectIds: ["proj1", "proj2"]
+        }
+      },
+      {
+        id: "2",
+        name: "Jira Tickets",
+        type: "jira",
+        status: "active",
+        lastSync: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        credentials: {
+          projectKey: "DESIGN"
+        }
+      }
     ];
   }
 
-  async getAdoptionTrends(): Promise<AdoptionTrendData[]> {
-    // In a real implementation, this data would be derived from metrics or come from a database
+  async createDataConnection(connection: any): Promise<any> {
+    // In a real application, this would persist the connection to a database
+    return {
+      id: `conn-${Date.now()}`,
+      name: connection.name,
+      type: connection.type,
+      status: "active",
+      lastSync: new Date().toISOString(),
+      credentials: connection.credentials
+    };
+  }
+
+  async syncDataConnection(id: string): Promise<any> {
+    // In a real application, this would trigger a sync with the external data source
+    return {
+      id,
+      status: "synced",
+      lastSync: new Date().toISOString(),
+      metrics: {
+        itemsSynced: 128,
+        newItems: 42,
+        errors: 0
+      }
+    };
+  }
+
+  async getUserAchievements(userId: number): Promise<any[]> {
+    // Mock user achievements
     return [
-      { date: "Q1 2023", components: 45, patterns: 30, tokens: 65 },
-      { date: "Q2 2023", components: 58, patterns: 42, tokens: 78 },
-      { date: "Q3 2023", components: 67, patterns: 55, tokens: 85 },
-      { date: "Q4 2023", components: 73, patterns: 65, tokens: 92 },
-      { date: "Q1 2024", components: 79, patterns: 72, tokens: 95 },
-      { date: "Q2 2024", components: 85, patterns: 78, tokens: 98 },
+      {
+        id: "1",
+        name: "Design System Pioneer",
+        description: "Created 5 components in the design system",
+        iconName: "trophy",
+        points: 100,
+        earned: true,
+        progress: 100
+      },
+      {
+        id: "2",
+        name: "Pattern Master",
+        description: "Applied design patterns consistently across 10 features",
+        iconName: "award",
+        points: 150,
+        earned: false,
+        progress: 60
+      }
     ];
   }
-  
-  // Helper function to format time ago
+
+  async getLeaderboard(): Promise<any[]> {
+    // Mock leaderboard data
+    return [
+      {
+        id: "1",
+        username: "alex.designer",
+        avatar: "AD",
+        level: 12,
+        points: 780,
+        streak: 15,
+        position: 1,
+        trend: "up"
+      },
+      {
+        id: "2",
+        username: "sarah.smith",
+        avatar: "SS",
+        level: 8,
+        points: 560,
+        streak: 8,
+        position: 2,
+        trend: "up"
+      },
+      {
+        id: "3",
+        username: "mike.jackson",
+        avatar: "MJ",
+        level: 7,
+        points: 480,
+        streak: 3,
+        position: 3,
+        trend: "down"
+      }
+    ];
+  }
+
+  async getUserLevel(userId: number): Promise<number> {
+    return 8; // Mock level
+  }
+
+  async getUserPoints(userId: number): Promise<number> {
+    return 560; // Mock points
+  }
+
+  async getPointsToNextLevel(userId: number): Promise<number> {
+    return 140; // Mock points to next level
+  }
+
+  async getDashboardLayout(userId: number): Promise<any> {
+    // Mock dashboard layout
+    return {
+      userId,
+      layout: [
+        { i: "kpi-cards", x: 0, y: 0, w: 12, h: 1 },
+        { i: "time-series", x: 0, y: 1, w: 8, h: 2 },
+        { i: "correlation", x: 8, y: 1, w: 4, h: 2 },
+        { i: "feature-adoption", x: 0, y: 3, w: 6, h: 2 },
+        { i: "feedback", x: 6, y: 3, w: 6, h: 2 },
+        { i: "metrics-table", x: 0, y: 5, w: 8, h: 2 },
+        { i: "goals", x: 8, y: 5, w: 4, h: 2 }
+      ]
+    };
+  }
+
+  async saveDashboardLayout(userId: number, layout: any): Promise<any> {
+    // In a real application, this would save the layout to a database
+    return {
+      userId,
+      layout,
+      savedAt: new Date().toISOString()
+    };
+  }
+
   private timeAgo(date: Date): string {
     const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const diffInMs = now.getTime() - date.getTime();
     
-    if (diffInSeconds < 60) {
-      return `${diffInSeconds} seconds ago`;
-    }
-    
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
     if (diffInMinutes < 60) {
       return `${diffInMinutes} minutes ago`;
     }
     
-    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
     if (diffInHours < 24) {
       return `${diffInHours} hours ago`;
     }
     
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 30) {
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    if (diffInDays < 7) {
       return `${diffInDays} days ago`;
+    }
+    
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    if (diffInWeeks < 5) {
+      return `${diffInWeeks} weeks ago`;
     }
     
     const diffInMonths = Math.floor(diffInDays / 30);
@@ -747,10 +825,6 @@ export class MemStorage implements IStorage {
     return `${diffInYears} years ago`;
   }
 }
-
-// DatabaseStorage implementation
-import { eq, desc, and, gte, lte } from "drizzle-orm";
-import { db } from "./db";
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
@@ -770,471 +844,550 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return user;
   }
-  
-  async getSummaryMetric(metricName: string): Promise<SummaryMetric> {
-    // Fetch metrics of the specified type
-    const metrics = await db.select()
-      .from(designMetrics)
-      .where(eq(designMetrics.metricName, metricName))
-      .orderBy(desc(designMetrics.recordedAt));
 
-    if (metrics.length === 0) {
-      return {
-        value: 0,
-        change: 0,
-        trend: "none"
-      };
-    }
+  async getSummaryMetric(metricName: string): Promise<SummaryMetric> {
+    // Implementation would access database in a real app
+    const mockData: Record<string, SummaryMetric> = {
+      velocity: {
+        value: 32,
+        change: 15,
+        trend: "up",
+        trendData: [25, 27, 28, 30, 32]
+      },
+      adoption: {
+        value: 78,
+        change: -5,
+        trend: "down",
+        trendData: [85, 83, 80, 79, 78]
+      },
+      usability: {
+        value: 92,
+        change: 8,
+        trend: "up",
+        trendData: [84, 86, 88, 90, 92]
+      }
+    };
     
-    // Group by month for latest data
-    const latestDate = new Date(metrics[0].recordedAt);
-    const latestMonth = latestDate.getMonth();
-    const latestYear = latestDate.getFullYear();
-    
-    const latestMetrics = metrics.filter(m => {
-      const date = new Date(m.recordedAt);
-      return date.getMonth() === latestMonth && date.getFullYear() === latestYear;
-    });
-    
-    const latestAvg = latestMetrics.reduce((sum, m) => sum + m.metricValue, 0) / latestMetrics.length;
-    
-    // Get previous month data
-    const previousMonth = latestMonth === 0 ? 11 : latestMonth - 1;
-    const previousYear = latestMonth === 0 ? latestYear - 1 : latestYear;
-    
-    const previousMetrics = metrics.filter(m => {
-      const date = new Date(m.recordedAt);
-      return date.getMonth() === previousMonth && date.getFullYear() === previousYear;
-    });
-    
-    // If no previous month data, assume 10% less than current
-    const previousAvg = previousMetrics.length > 0
-      ? previousMetrics.reduce((sum, m) => sum + m.metricValue, 0) / previousMetrics.length
-      : latestAvg * 0.9;
-    
-    // Calculate change percentage
-    let change = ((latestAvg - previousAvg) / previousAvg) * 100;
-    // For design_velocity, lower is better, so invert the change
-    if (metricName === "design_velocity") {
-      change = -change;
-    }
-    
-    // Get trend direction
-    const trend = change > 0 ? "up" : change < 0 ? "down" : "none";
-    
-    // Prepare trend data for sparkline charts
-    const trendData = metricName === "design_velocity" || metricName === "usability_score"
-      ? metrics.slice(0, 6).map(m => m.metricValue).reverse()
-      : undefined;
-    
-    return {
-      value: parseFloat(latestAvg.toFixed(1)),
-      change: parseFloat(Math.abs(change).toFixed(1)),
-      trend,
-      trendData,
+    return mockData[metricName] || {
+      value: 0,
+      change: 0,
+      trend: "none",
+      trendData: [0, 0, 0, 0, 0]
     };
   }
-  
+
   async getTimeSeriesData(metricName: string): Promise<TimeSeriesData> {
-    const metrics = await db.select()
-      .from(designMetrics)
-      .where(eq(designMetrics.metricName, metricName))
-      .orderBy(designMetrics.recordedAt);
-    
-    // Group by month
-    const monthlyData = new Map<string, number[]>();
-    
-    metrics.forEach(metric => {
-      const date = new Date(metric.recordedAt);
-      const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-      
-      if (!monthlyData.has(monthKey)) {
-        monthlyData.set(monthKey, []);
-      }
-      
-      monthlyData.get(monthKey)!.push(metric.metricValue);
+    // Implementation would access database in a real app
+    const today = new Date();
+    const dates = Array.from({ length: 30 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - (29 - i));
+      return date.toISOString().split('T')[0];
     });
-    
-    // Calculate average for each month
-    return Array.from(monthlyData.entries())
-      .map(([monthKey, values]) => {
-        const [year, month] = monthKey.split('-').map(Number);
-        const date = new Date(year, month - 1).toLocaleString('default', { month: 'short' });
-        const value = values.reduce((sum, val) => sum + val, 0) / values.length;
-        
-        return {
-          date,
-          value: parseFloat(value.toFixed(1))
-        };
-      })
-      .sort((a, b) => {
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return months.indexOf(a.date) - months.indexOf(b.date);
-      });
+
+    const mockData: Record<string, TimeSeriesData> = {
+      velocityTrend: dates.map((date, i) => ({
+        date,
+        value: 20 + Math.floor(Math.random() * 20) + i * 0.5
+      }))
+    };
+
+    return mockData[metricName] || dates.map(date => ({ date, value: 0 }));
   }
-  
+
   async getCorrelationData(metric1: string, metric2: string): Promise<CorrelationData> {
-    // This would ideally compare two metrics from the database
-    // For simplicity with the current schema, returning sample data
-    return [
-      { designQuality: 72, retention: 64 },
-      { designQuality: 76, retention: 69 },
-      { designQuality: 78, retention: 68 },
-      { designQuality: 81, retention: 74 },
-      { designQuality: 83, retention: 76 },
-      { designQuality: 85, retention: 78 },
-      { designQuality: 87, retention: 82 },
-      { designQuality: 89, retention: 85 },
-      { designQuality: 92, retention: 87 },
-    ];
+    // Implementation would access database in a real app
+    const mockData: Record<string, CorrelationData> = {
+      impactRetentionCorrelation: Array.from({ length: 20 }, () => ({
+        designQuality: 60 + Math.floor(Math.random() * 30),
+        retention: 65 + Math.floor(Math.random() * 25)
+      }))
+    };
+
+    return mockData[`${metric1}${metric2}Correlation`] || [];
   }
-  
+
   async getFeatureAdoptionByPersona(): Promise<FeatureAdoptionData> {
-    // Get all features
-    const allFeatures = await db.select().from(features);
-    
-    // Get adoption metrics
-    const adoptionMetrics = await db.select()
-      .from(designMetrics)
-      .where(eq(designMetrics.metricName, "adoption_rate"));
-    
-    const results: FeatureAdoptionData = [];
-    
-    // Calculate adoption rates for each feature by persona
-    for (const feature of allFeatures) {
-      const featureMetrics = adoptionMetrics.filter(m => m.featureId === feature.id.toString());
-      
-      // Group by user segment
-      const segmentMetrics = new Map<string, DesignMetric[]>();
-      
-      featureMetrics.forEach(metric => {
-        const segment = metric.userSegment || "unknown";
-        
-        if (!segmentMetrics.has(segment)) {
-          segmentMetrics.set(segment, []);
-        }
-        
-        segmentMetrics.get(segment)!.push(metric);
-      });
-      
-      // Calculate average for each persona
-      const powerUsers = segmentMetrics.has("power") 
-        ? segmentMetrics.get("power")!.reduce((sum, m) => sum + m.metricValue, 0) / segmentMetrics.get("power")!.length
-        : 0;
-        
-      const casualUsers = segmentMetrics.has("casual") 
-        ? segmentMetrics.get("casual")!.reduce((sum, m) => sum + m.metricValue, 0) / segmentMetrics.get("casual")!.length
-        : 0;
-        
-      const newUsers = segmentMetrics.has("new") 
-        ? segmentMetrics.get("new")!.reduce((sum, m) => sum + m.metricValue, 0) / segmentMetrics.get("new")!.length
-        : 0;
-      
-      results.push({
-        feature: feature.name,
-        powerUsers: Math.round(powerUsers),
-        casualUsers: Math.round(casualUsers),
-        newUsers: Math.round(newUsers)
-      });
-    }
+    // Implementation would access database in a real app
+    const results: FeatureAdoptionData = [
+      { feature: "Dashboard", powerUsers: 85, casualUsers: 62, newUsers: 38 },
+      { feature: "Analytics Charts", powerUsers: 92, casualUsers: 45, newUsers: 22 },
+      { feature: "Payment Flow", powerUsers: 78, casualUsers: 68, newUsers: 52 },
+      { feature: "Accounts", powerUsers: 95, casualUsers: 72, newUsers: 60 },
+      { feature: "Mobile Nav", powerUsers: 65, casualUsers: 58, newUsers: 42 }
+    ];
     
     return results;
   }
-  
+
   async getFeatureMetrics(): Promise<FeatureMetric[]> {
-    // Get all features
-    const allFeatures = await db.select().from(features);
-    const results: FeatureMetric[] = [];
-    
-    for (const feature of allFeatures) {
-      // Get metrics for this feature
-      const featureMetrics = await db.select()
-        .from(designMetrics)
-        .where(eq(designMetrics.featureId, feature.id.toString()));
-      
-      // Group metrics by type
-      const metricsByType = new Map<string, DesignMetric[]>();
-      
-      featureMetrics.forEach(metric => {
-        if (!metricsByType.has(metric.metricName)) {
-          metricsByType.set(metric.metricName, []);
-        }
-        
-        metricsByType.get(metric.metricName)!.push(metric);
-      });
-      
-      // Calculate latest values and changes
-      const getLatestAndChange = (metricName: string): { value: number; change: number; trend: "up" | "down" | "none" } => {
-        if (!metricsByType.has(metricName)) {
-          return { value: 0, change: 0, trend: "none" };
-        }
-        
-        const metrics = metricsByType.get(metricName)!
-          .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
-        
-        // Latest month metrics
-        const latestDate = new Date(metrics[0].recordedAt);
-        const latestMonth = latestDate.getMonth();
-        const latestYear = latestDate.getFullYear();
-        
-        const latestMetrics = metrics.filter(m => {
-          const date = new Date(m.recordedAt);
-          return date.getMonth() === latestMonth && date.getFullYear() === latestYear;
-        });
-        
-        const latestAvg = latestMetrics.reduce((sum, m) => sum + m.metricValue, 0) / latestMetrics.length;
-        
-        // Previous month metrics
-        const previousMonth = latestMonth === 0 ? 11 : latestMonth - 1;
-        const previousYear = latestMonth === 0 ? latestYear - 1 : latestYear;
-        
-        const previousMetrics = metrics.filter(m => {
-          const date = new Date(m.recordedAt);
-          return date.getMonth() === previousMonth && date.getFullYear() === previousYear;
-        });
-        
-        // If no previous data, assume 10% improvement
-        const previousAvg = previousMetrics.length > 0
-          ? previousMetrics.reduce((sum, m) => sum + m.metricValue, 0) / previousMetrics.length
-          : latestAvg * 0.9;
-        
-        // Calculate change percentage
-        let change = ((latestAvg - previousAvg) / previousAvg) * 100;
-        
-        // For design_velocity, lower is better
-        let trend: "up" | "down" | "none";
-        if (metricName === "design_velocity") {
-          trend = change < 0 ? "up" : change > 0 ? "down" : "none";
-        } else {
-          trend = change > 0 ? "up" : change < 0 ? "down" : "none";
-        }
-        
-        return { 
-          value: parseFloat(latestAvg.toFixed(1)), 
-          change: parseFloat(Math.abs(change).toFixed(1)), 
-          trend 
-        };
-      };
-      
-      const impactScore = getLatestAndChange("impact_score");
-      const adoptionRate = getLatestAndChange("adoption_rate");
-      const designVelocity = getLatestAndChange("design_velocity");
-      const usabilityScore = getLatestAndChange("usability_score");
-      
-      results.push({
-        id: feature.id.toString(),
+    // Implementation would access database in a real app
+    return [
+      {
+        id: "1",
         feature: {
-          name: feature.name,
-          icon: feature.iconName || "extension",
-          lastUpdated: this.timeAgo(new Date(feature.lastUpdated!))
+          name: "Dashboard Component",
+          icon: "dashboard",
+          lastUpdated: "2 days ago"
         },
-        impactScore,
-        adoptionRate,
+        impactScore: {
+          value: 9.2,
+          change: 1.8,
+          trend: "up"
+        },
+        adoptionRate: {
+          value: 84,
+          change: 12,
+          trend: "up"
+        },
         timeToDesign: {
-          value: `${designVelocity.value} days`,
-          change: designVelocity.change,
-          trend: designVelocity.trend
+          value: "3.2 days",
+          change: -0.8,
+          trend: "down" // down is good for time metrics
         },
-        usabilityScore
-      });
-    }
-    
-    return results;
+        usabilityScore: {
+          value: 92,
+          change: 8,
+          trend: "up"
+        }
+      },
+      {
+        id: "2",
+        feature: {
+          name: "Payment Flow",
+          icon: "payments",
+          lastUpdated: "5 days ago"
+        },
+        impactScore: {
+          value: 9.5,
+          change: 0.5,
+          trend: "up"
+        },
+        adoptionRate: {
+          value: 72,
+          change: -3,
+          trend: "down"
+        },
+        timeToDesign: {
+          value: "5.8 days",
+          change: 1.2,
+          trend: "up" // up is bad for time metrics
+        },
+        usabilityScore: {
+          value: 84,
+          change: -2,
+          trend: "down"
+        }
+      },
+      {
+        id: "3",
+        feature: {
+          name: "Account Management",
+          icon: "account_balance",
+          lastUpdated: "1 week ago"
+        },
+        impactScore: {
+          value: 8.7,
+          change: 2.1,
+          trend: "up"
+        },
+        adoptionRate: {
+          value: 91,
+          change: 15,
+          trend: "up"
+        },
+        timeToDesign: {
+          value: "4.5 days",
+          change: -1.2,
+          trend: "down"
+        },
+        usabilityScore: {
+          value: 88,
+          change: 6,
+          trend: "up"
+        }
+      }
+    ];
   }
-  
+
   async getUserFeedback(): Promise<FeedbackItem[]> {
-    const results: FeedbackItem[] = [];
-    
-    // Get all feedback items
-    const allFeedback = await db.select().from(feedback);
-    
-    // Order by creation time
-    allFeedback.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
-    
-    // Format feedback items
-    for (const item of allFeedback) {
-      const [featureData] = await db.select()
-        .from(features)
-        .where(eq(features.id, Number(item.featureId)));
-      
-      results.push({
-        id: item.id.toString(),
-        user: {
-          initials: item.userInitials,
-          color: item.userColorClass || "bg-primary-100 text-primary-700"
-        },
-        content: item.content,
-        description: item.description || "",
-        rating: item.rating,
-        feature: featureData ? `${featureData.name} Feature` : "Unknown Feature"
-      });
-    }
-    
-    return results;
+    // Implementation would access database in a real app
+    return [
+      {
+        id: "1",
+        user: { initials: "JD", color: "bg-blue-500" },
+        content: "Dashboard is intuitive and shows the right metrics",
+        description: "User found the dashboard metrics valuable for decision making",
+        rating: 5,
+        feature: "Dashboard"
+      },
+      {
+        id: "2",
+        user: { initials: "AK", color: "bg-green-500" },
+        content: "Payment confirmation screen is confusing",
+        description: "User experienced issues with understanding the payment confirmation process",
+        rating: 2,
+        feature: "Payment Flow"
+      },
+      {
+        id: "3",
+        user: { initials: "MR", color: "bg-purple-500" },
+        content: "Account section is missing quick access to settings",
+        description: "User suggested adding a shortcut to frequently used settings",
+        rating: 3,
+        feature: "Account Management"
+      },
+      {
+        id: "4",
+        user: { initials: "LT", color: "bg-amber-500" },
+        content: "Love the new analytics visualizations",
+        description: "User found the data visualizations much more helpful than before",
+        rating: 5,
+        feature: "Analytics Charts"
+      }
+    ];
   }
-  
+
   async getDesignGoals(): Promise<GoalItem[]> {
-    const allGoals = await db.select().from(goals);
-    
-    return allGoals.map(goal => {
-      const progress = Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100));
-      
-      return {
-        id: goal.id.toString(),
-        name: goal.name,
-        current: goal.currentValue,
-        target: goal.targetValue,
-        progress,
-        color: (goal.color as "primary" | "secondary" | "amber") || "primary",
-        unit: goal.unit || undefined
-      };
-    });
-  }
-  
-  async getDesignSystemMaturity(): Promise<MaturityDimension[]> {
-    // In a real implementation, this would come from the database
-    // For now, returning static data until we add a dedicated table
+    // Implementation would access database in a real app
     return [
-      { name: "Component Coverage", score: 78, fullMark: 100 },
-      { name: "Documentation", score: 65, fullMark: 100 },
-      { name: "Governance", score: 82, fullMark: 100 },
-      { name: "Team Adoption", score: 75, fullMark: 100 },
-      { name: "Versioning", score: 87, fullMark: 100 },
-      { name: "Accessibility", score: 70, fullMark: 100 },
+      {
+        id: "1",
+        name: "Improve User Satisfaction",
+        current: 78,
+        target: 90,
+        progress: 78 / 90 * 100,
+        color: "primary",
+        unit: "%"
+      },
+      {
+        id: "2",
+        name: "Design System Adoption",
+        current: 65,
+        target: 85,
+        progress: 65 / 85 * 100,
+        color: "secondary",
+        unit: "%"
+      },
+      {
+        id: "3",
+        name: "Reduce Design Time",
+        current: 5.2,
+        target: 3,
+        progress: (1 - ((5.2 - 3) / 5.2)) * 100,
+        color: "amber",
+        unit: "days"
+      }
     ];
   }
 
-  async getDesignSystemUsage(): Promise<UsageData[]> {
-    // In a real implementation, this would come from the database
-    // For now, returning static data until we add a dedicated table
-    return [
-      { department: "UX Team", usage: 92, target: 90, color: "#6366f1" },
-      { department: "Frontend", usage: 85, target: 80, color: "#22c55e" },
-      { department: "Mobile", usage: 68, target: 75, color: "#f59e0b" },
-      { department: "Marketing", usage: 45, target: 60, color: "#ef4444" },
-      { department: "Internal Tools", usage: 78, target: 70, color: "#8b5cf6" },
-    ];
-  }
-
-  async getAdoptionTrends(): Promise<AdoptionTrendData[]> {
-    // In a real implementation, this would come from the database
-    // For now, returning static data until we add a dedicated table
-    return [
-      { date: "Q1 2023", components: 45, patterns: 30, tokens: 65 },
-      { date: "Q2 2023", components: 58, patterns: 42, tokens: 78 },
-      { date: "Q3 2023", components: 67, patterns: 55, tokens: 85 },
-      { date: "Q4 2023", components: 73, patterns: 65, tokens: 92 },
-      { date: "Q1 2024", components: 79, patterns: 72, tokens: 95 },
-      { date: "Q2 2024", components: 85, patterns: 78, tokens: 98 },
-    ];
-  }
-  
   async getMetricsByFeature(featureId: string): Promise<DesignMetric[]> {
-    return db.select()
-      .from(designMetrics)
-      .where(eq(designMetrics.featureId, featureId))
-      .orderBy(desc(designMetrics.recordedAt));
+    const metrics = await db.select().from(designMetrics);
+    return metrics.filter(m => m.featureId === featureId);
   }
-  
+
   async getMetricsByTimeRange(startDate: string, endDate: string, metricType?: string): Promise<DesignMetric[]> {
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    let query = db.select()
-      .from(designMetrics)
-      .where(
-        and(
-          gte(designMetrics.recordedAt, start),
-          lte(designMetrics.recordedAt, end)
-        )
-      );
-    
-    if (metricType) {
-      query = query.where(eq(designMetrics.metricName, metricType));
-    }
-    
-    return query.orderBy(designMetrics.recordedAt);
+    const metrics = await db.select().from(designMetrics);
+    return metrics.filter(metric => {
+      const recordDate = new Date(metric.recordedAt);
+      const matchesTimeRange = recordDate >= start && recordDate <= end;
+      const matchesType = metricType ? metric.metricName.includes(metricType) : true;
+      return matchesTimeRange && matchesType;
+    });
   }
-  
+
+  async getDesignSystemMaturity(): Promise<MaturityDimension[]> {
+    // Implementation would access database in a real app
+    return [
+      { name: "Components", score: 80, fullMark: 100 },
+      { name: "Patterns", score: 65, fullMark: 100 },
+      { name: "Documentation", score: 90, fullMark: 100 },
+      { name: "Processes", score: 70, fullMark: 100 },
+      { name: "Governance", score: 55, fullMark: 100 },
+      { name: "Adoption", score: 75, fullMark: 100 }
+    ];
+  }
+
+  async getDesignSystemUsage(): Promise<UsageData[]> {
+    // Implementation would access database in a real app
+    return [
+      { department: "Product", usage: 85, target: 90, color: "#8884d8" },
+      { department: "Marketing", usage: 70, target: 80, color: "#83a6ed" },
+      { department: "Support", usage: 55, target: 75, color: "#8dd1e1" },
+      { department: "Mobile", usage: 90, target: 85, color: "#82ca9d" },
+      { department: "Internal Tools", usage: 40, target: 60, color: "#a4de6c" }
+    ];
+  }
+
+  async getAdoptionTrends(): Promise<AdoptionTrendData[]> {
+    // Implementation would access database in a real app
+    const today = new Date();
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const date = new Date(today);
+      date.setMonth(date.getMonth() - (5 - i));
+      return date.toISOString().split('T')[0].substring(0, 7); // YYYY-MM format
+    });
+
+    return months.map((date, i) => ({
+      date,
+      components: 30 + i * 8 + Math.floor(Math.random() * 5),
+      patterns: 15 + i * 5 + Math.floor(Math.random() * 3),
+      tokens: 45 + i * 10 + Math.floor(Math.random() * 8)
+    }));
+  }
+
   async createFeature(feature: InsertFeature): Promise<Feature> {
     const [newFeature] = await db
       .insert(features)
-      .values({
-        ...feature,
-        lastUpdated: new Date()
-      })
+      .values(feature)
       .returning();
-    
     return newFeature;
   }
-  
+
   async createMetric(metric: InsertDesignMetric): Promise<DesignMetric> {
     const [newMetric] = await db
       .insert(designMetrics)
-      .values({
-        ...metric,
-        recordedAt: metric.recordedAt || new Date()
-      })
+      .values(metric)
       .returning();
-    
     return newMetric;
   }
-  
+
   async createGoal(goal: InsertGoal): Promise<Goal> {
     const [newGoal] = await db
       .insert(goals)
-      .values({
-        ...goal,
-        createdAt: new Date()
-      })
+      .values(goal)
       .returning();
-    
     return newGoal;
   }
-  
+
   async createFeedback(feedbackItem: InsertFeedback): Promise<Feedback> {
     const [newFeedback] = await db
       .insert(feedback)
-      .values({
-        ...feedbackItem,
-        createdAt: new Date()
-      })
+      .values(feedbackItem)
       .returning();
-    
     return newFeedback;
   }
-  
-  // Helper function
-  private timeAgo(date: Date): string {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) {
-      return `${diffInSeconds} seconds ago`;
-    }
-    
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes} minutes ago`;
-    }
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) {
-      return `${diffInHours} hours ago`;
-    }
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 30) {
-      return `${diffInDays} days ago`;
-    }
-    
-    const diffInMonths = Math.floor(diffInDays / 30);
-    if (diffInMonths < 12) {
-      return `${diffInMonths} months ago`;
-    }
-    
-    const diffInYears = Math.floor(diffInMonths / 12);
-    return `${diffInYears} years ago`;
+
+  async getDesignInsights(): Promise<any[]> {
+    // Implementation would access database in a real app
+    return [
+      {
+        id: "1",
+        title: "Adoption trend detected in Dashboard component",
+        description: "Dashboard component adoption has increased by 32% over the last month, correlating with improved user retention metrics.",
+        type: "trend",
+        confidence: 89,
+        relatedFeatures: ["Dashboard", "User Analytics"],
+        generatedAt: new Date().toISOString(),
+        pinned: false,
+        seen: true
+      },
+      {
+        id: "2",
+        title: "Usability issue in Payment Flow",
+        description: "Users are spending 40% more time on the payment confirmation screen compared to industry benchmarks. Consider simplifying this screen.",
+        type: "anomaly",
+        confidence: 76,
+        relatedFeatures: ["Payments"],
+        generatedAt: new Date().toISOString(),
+        pinned: true,
+        seen: true
+      },
+      {
+        id: "3",
+        title: "Consider unifying button styles across Accounts section",
+        description: "Analysis shows inconsistent button styling in the Accounts section may be impacting user confidence. Standardizing would improve UX metrics.",
+        type: "recommendation",
+        confidence: 82,
+        relatedFeatures: ["Accounts", "Design System"],
+        generatedAt: new Date().toISOString(),
+        pinned: false,
+        seen: false
+      }
+    ];
+  }
+
+  async createDesignInsight(insight: any): Promise<any> {
+    // In a real application, this would persist the insight to a database
+    return {
+      id: `insight-${Date.now()}`,
+      title: insight.title,
+      description: insight.description,
+      type: insight.type,
+      confidence: insight.confidence,
+      relatedFeatures: insight.relatedFeatures,
+      generatedAt: new Date().toISOString(),
+      pinned: false,
+      seen: false
+    };
+  }
+
+  async updateDesignInsight(id: string, updates: { pinned?: boolean; seen?: boolean }): Promise<any> {
+    // In a real application, this would update the insight in a database
+    return {
+      id,
+      title: "Mock Insight",
+      description: "This is a mock response for updating an insight",
+      type: "trend",
+      confidence: 80,
+      relatedFeatures: ["Design System"],
+      generatedAt: new Date().toISOString(),
+      pinned: updates.pinned ?? false,
+      seen: updates.seen ?? false
+    };
+  }
+
+  async getDataConnections(): Promise<any[]> {
+    // Implementation would access database in a real app
+    return [
+      {
+        id: "1",
+        name: "Figma Integration",
+        type: "figma",
+        status: "active",
+        lastSync: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        credentials: {
+          teamId: "team_xyz",
+          projectIds: ["proj1", "proj2"]
+        }
+      },
+      {
+        id: "2",
+        name: "Jira Tickets",
+        type: "jira",
+        status: "active",
+        lastSync: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        credentials: {
+          projectKey: "DESIGN"
+        }
+      }
+    ];
+  }
+
+  async createDataConnection(connection: any): Promise<any> {
+    // In a real application, this would persist the connection to a database
+    return {
+      id: `conn-${Date.now()}`,
+      name: connection.name,
+      type: connection.type,
+      status: "active",
+      lastSync: new Date().toISOString(),
+      credentials: connection.credentials
+    };
+  }
+
+  async syncDataConnection(id: string): Promise<any> {
+    // In a real application, this would trigger a sync with the external data source
+    return {
+      id,
+      status: "synced",
+      lastSync: new Date().toISOString(),
+      metrics: {
+        itemsSynced: 128,
+        newItems: 42,
+        errors: 0
+      }
+    };
+  }
+
+  async getUserAchievements(userId: number): Promise<any[]> {
+    // Implementation would access database in a real app
+    return [
+      {
+        id: "1",
+        name: "Design System Pioneer",
+        description: "Created 5 components in the design system",
+        iconName: "trophy",
+        points: 100,
+        earned: true,
+        progress: 100
+      },
+      {
+        id: "2",
+        name: "Pattern Master",
+        description: "Applied design patterns consistently across 10 features",
+        iconName: "award",
+        points: 150,
+        earned: false,
+        progress: 60
+      }
+    ];
+  }
+
+  async getLeaderboard(): Promise<any[]> {
+    // Implementation would access database in a real app
+    return [
+      {
+        id: "1",
+        username: "alex.designer",
+        avatar: "AD",
+        level: 12,
+        points: 780,
+        streak: 15,
+        position: 1,
+        trend: "up"
+      },
+      {
+        id: "2",
+        username: "sarah.smith",
+        avatar: "SS",
+        level: 8,
+        points: 560,
+        streak: 8,
+        position: 2,
+        trend: "up"
+      },
+      {
+        id: "3",
+        username: "mike.jackson",
+        avatar: "MJ",
+        level: 7,
+        points: 480,
+        streak: 3,
+        position: 3,
+        trend: "down"
+      }
+    ];
+  }
+
+  async getUserLevel(userId: number): Promise<number> {
+    return 8; // Mock level, would fetch from database in real app
+  }
+
+  async getUserPoints(userId: number): Promise<number> {
+    return 560; // Mock points, would fetch from database in real app
+  }
+
+  async getPointsToNextLevel(userId: number): Promise<number> {
+    return 140; // Mock points to next level, would calculate in real app
+  }
+
+  async getDashboardLayout(userId: number): Promise<any> {
+    // Implementation would access database in a real app
+    return {
+      userId,
+      layout: [
+        { i: "kpi-cards", x: 0, y: 0, w: 12, h: 1 },
+        { i: "time-series", x: 0, y: 1, w: 8, h: 2 },
+        { i: "correlation", x: 8, y: 1, w: 4, h: 2 },
+        { i: "feature-adoption", x: 0, y: 3, w: 6, h: 2 },
+        { i: "feedback", x: 6, y: 3, w: 6, h: 2 },
+        { i: "metrics-table", x: 0, y: 5, w: 8, h: 2 },
+        { i: "goals", x: 8, y: 5, w: 4, h: 2 }
+      ]
+    };
+  }
+
+  async saveDashboardLayout(userId: number, layout: any): Promise<any> {
+    // In a real application, this would save the layout to a database
+    return {
+      userId,
+      layout,
+      savedAt: new Date().toISOString()
+    };
   }
 }
 
