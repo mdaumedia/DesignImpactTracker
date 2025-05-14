@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { etlService } from "./services/etl";
 import { insertDataConnectionSchema, insertDesignInsightSchema } from "@shared/schema";
 import { z } from "zod";
 
