@@ -3,15 +3,15 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@lib/queryClient";
-import { toast } from "@hooks/use-toast";
+import { apiRequest } from "../../lib/queryClient";
+import { useToast } from "../../hooks/use-toast";
 
 // UI Components
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select";
-import { Input } from "@components/ui/input";
-import { Button } from "@components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, ArrowRight, Check, Loader2 } from "lucide-react";
 
 const dataConnectionFormSchema = z.object({
@@ -24,6 +24,7 @@ type DataConnectionFormValues = z.infer<typeof dataConnectionFormSchema>;
 
 export default function DataConnectionForm() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [step, setStep] = useState<"type" | "credentials" | "confirm">("type");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -41,10 +42,7 @@ export default function DataConnectionForm() {
     setIsSubmitting(true);
     
     try {
-      await apiRequest("/api/data-connections", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      await apiRequest("/api/data-connections", "POST", JSON.stringify(data));
       
       // Reset form and show success message
       form.reset();
@@ -215,11 +213,11 @@ export default function DataConnectionForm() {
                 <FormItem>
                   <FormLabel>Private Key</FormLabel>
                   <FormControl>
-                    <Input
-                      as="textarea"
+                    <textarea
                       placeholder="-----BEGIN PRIVATE KEY-----\n..."
                       {...field}
                       style={{ minHeight: "100px" }}
+                      className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </FormControl>
                   <FormMessage />
@@ -329,8 +327,7 @@ export default function DataConnectionForm() {
                 <FormItem>
                   <FormLabel>CSV Mapping Configuration</FormLabel>
                   <FormControl>
-                    <Input
-                      as="textarea"
+                    <textarea
                       placeholder='[{"column": 0, "field": "feature"}, {"column": 1, "field": "metricName"}]'
                       value={typeof field.value === 'string' ? field.value : JSON.stringify(field.value || [])}
                       onChange={(e) => {
@@ -342,6 +339,7 @@ export default function DataConnectionForm() {
                         }
                       }}
                       style={{ minHeight: "100px" }}
+                      className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </FormControl>
                   <FormMessage />

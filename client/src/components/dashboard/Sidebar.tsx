@@ -7,7 +7,8 @@ import {
   InsertChart, 
   Settings, 
   Logout,
-  Insights
+  Insights,
+  Database
 } from "@/lib/icons";
 
 const NavItem = ({ 
@@ -80,28 +81,35 @@ export function Sidebar() {
         <div className="space-y-1">
           <NavItem 
             href="/" 
-            icon={<Dashboard className="text-primary-500" />} 
+            icon={<Dashboard className={location === "/" ? "text-primary-500" : "text-slate-400"} />} 
             active={location === "/"}>
             Dashboard
           </NavItem>
           
           <NavItem 
+            href="/data-sources" 
+            icon={<Database className={location === "/data-sources" ? "text-primary-500" : "text-slate-400"} />} 
+            active={location === "/data-sources"}>
+            Data Sources
+          </NavItem>
+          
+          <NavItem 
             href="/metrics" 
-            icon={<Assessment className="text-slate-400" />} 
+            icon={<Assessment className={location === "/metrics" ? "text-primary-500" : "text-slate-400"} />} 
             active={location === "/metrics"}>
             Metrics
           </NavItem>
           
           <NavItem 
             href="/reports" 
-            icon={<InsertChart className="text-slate-400" />} 
+            icon={<InsertChart className={location === "/reports" ? "text-primary-500" : "text-slate-400"} />} 
             active={location === "/reports"}>
             Reports
           </NavItem>
           
           <NavItem 
             href="/settings" 
-            icon={<Settings className="text-slate-400" />} 
+            icon={<Settings className={location === "/settings" ? "text-primary-500" : "text-slate-400"} />} 
             active={location === "/settings"}>
             Settings
           </NavItem>

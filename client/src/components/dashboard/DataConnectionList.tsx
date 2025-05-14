@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@lib/queryClient";
+import { apiRequest } from "../../lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
-import { toast } from "@hooks/use-toast";
+import { useToast } from "../../hooks/use-toast";
 
 // UI Components
-import { Button } from "@components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -20,7 +20,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@components/ui/table";
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +30,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog";
 import {
   CheckCircle2,
   Database,
@@ -41,8 +41,8 @@ import {
   AlertCircle,
   LoaderCircle,
 } from "lucide-react";
-import { Badge } from "@components/ui/badge";
-import { Skeleton } from "@components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Type definitions for data connections
 type DataConnection = {
@@ -56,6 +56,7 @@ type DataConnection = {
 
 export default function DataConnectionList() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   
@@ -70,9 +71,7 @@ export default function DataConnectionList() {
     setSyncingId(id);
     
     try {
-      await apiRequest(`/api/data-connections/${id}/sync`, {
-        method: "POST",
-      });
+      await apiRequest(`/api/data-connections/${id}/sync`, "POST");
       
       // Invalidate connections to refresh with new sync status
       queryClient.invalidateQueries({ queryKey: ["/api/data-connections"] });
@@ -97,9 +96,7 @@ export default function DataConnectionList() {
   // Handle delete action
   const handleDelete = async (id: string) => {
     try {
-      await apiRequest(`/api/data-connections/${id}`, {
-        method: "DELETE",
-      });
+      await apiRequest(`/api/data-connections/${id}`, "DELETE");
       
       // Invalidate connections to remove the deleted one
       queryClient.invalidateQueries({ queryKey: ["/api/data-connections"] });
@@ -125,7 +122,7 @@ export default function DataConnectionList() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge variant="success">Active</Badge>;
+        return <Badge className="bg-green-500">Active</Badge>;
       case "error":
         return <Badge variant="destructive">Error</Badge>;
       case "inactive":
