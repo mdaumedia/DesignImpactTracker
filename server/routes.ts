@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { etlService } from "./services/etl";
+import { etlService } from "./services/etl-service";
 import { insertDataConnectionSchema, insertDesignInsightSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -143,10 +143,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============= ADVANCED FEATURE ROUTES =============
 
-  // Data Connections API routes
+  // ETL Data Connections API routes
   app.get("/api/data-connections", async (req, res) => {
     try {
-      const connections = await storage.getDataConnections();
+      const connections = await etlService.getDataConnections();
       res.json(connections);
     } catch (error) {
       console.error("Error fetching data connections:", error);
@@ -156,26 +156,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/data-connections", async (req, res) => {
     try {
-      const data = insertDataConnectionSchema.parse(req.body);
-      const connection = await storage.createDataConnection(data);
+      const connectionData = insertDataConnectionSchema.parse(req.body);
+      const connection = await etlService.createDataConnection(connectionData);
       res.json(connection);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       console.error("Error creating data connection:", error);
-      res.status(500).json({ message: "Failed to create data connection" });
+      res.status(500).json({ 
+        message: "Failed to create data connection", 
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
   app.post("/api/data-connections/:id/sync", async (req, res) => {
     try {
       const id = req.params.id;
-      const result = await storage.syncDataConnection(id);
+      const result = await etlService.syncDataConnection(id);
       res.json(result);
     } catch (error) {
       console.error(`Error syncing data connection ${req.params.id}:`, error);
-      res.status(500).json({ message: "Failed to sync data connection" });
+      res.status(500).json({ 
+        message: "Failed to sync data connection",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  app.get("/api/data-connections/:id/status", async (req, res) => {
+    try {
+      const id = req.params.id;
+      const status = await etlService.getConnectionStatus(id);
+      res.json(status);
+    } catch (error) {
+      console.error(`Error fetching status for data connection ${req.params.id}:`, error);
+      res.status(500).json({ 
+        message: "Failed to get connection status",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  app.delete("/api/data-connections/:id", async (req, res) => {
+    try {
+      const id = req.params.id;
+      await etlService.deleteConnection(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error(`Error deleting data connection ${req.params.id}:`, error);
+      res.status(500).json({ 
+        message: "Failed to delete data connection",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  app.post("/api/etl/run-pipeline", async (req, res) => {
+    try {
+      const results = await etlService.runFullETLPipeline();
+      res.json(results);
+    } catch (error) {
+      console.error("Error running ETL pipeline:", error);
+      res.status(500).json({ 
+        message: "Failed to run ETL pipeline",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

@@ -123,25 +123,22 @@ export const leaderboard = pgTable("leaderboard", {
 
 // ETL Integration tables
 export const dataConnections = pgTable("data_connections", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: text("id").primaryKey(), // Using string IDs for easier handling
   name: text("name").notNull(),
-  sourceName: text("source_name").notNull(), // figma, jira, azure, google_analytics, power_bi
-  connectionConfig: jsonb("connection_config").notNull(),
-  lastSyncedAt: timestamp("last_synced_at"),
-  status: text("status").notNull().default("idle"), // idle, running, error
+  type: text("type").notNull(), // figma, jira, azure_analytics, google_analytics, power_bi, csv
+  status: text("status").notNull().default("active"), // active, inactive, error
+  credentials: jsonb("credentials").notNull(), // API keys, tokens, connection details
   createdAt: timestamp("created_at").defaultNow(),
-  createdBy: integer("created_by").notNull(),
-  active: boolean("active").notNull().default(true),
+  lastSyncAt: timestamp("last_sync_at"), // Timestamp of the last successful sync
 });
 
 export const dataImportLogs = pgTable("data_import_logs", {
-  id: serial("id").primaryKey(),
-  connectionId: uuid("connection_id").notNull(),
-  startedAt: timestamp("started_at").defaultNow(),
-  completedAt: timestamp("completed_at"),
-  status: text("status").notNull().default("running"), // running, success, error
+  id: text("id").primaryKey(), // Using string IDs for easier handling
+  connectionId: text("connection_id").notNull().references(() => dataConnections.id),
   recordsProcessed: integer("records_processed").default(0),
-  errorDetails: text("error_details"),
+  success: boolean("success").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  error: text("error"), // Error message if sync failed
 });
 
 // AI Insights tables
@@ -183,13 +180,9 @@ export const insertLeaderboardSchema = createInsertSchema(leaderboard).omit({
   id: true,
 });
 
-export const insertDataConnectionSchema = createInsertSchema(dataConnections).omit({
-  id: true,
-});
+export const insertDataConnectionSchema = createInsertSchema(dataConnections);
 
-export const insertDataImportLogSchema = createInsertSchema(dataImportLogs).omit({
-  id: true,
-});
+export const insertDataImportLogSchema = createInsertSchema(dataImportLogs);
 
 export const insertDesignInsightSchema = createInsertSchema(designInsights).omit({
   id: true,
