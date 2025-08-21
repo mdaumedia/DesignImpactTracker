@@ -27,14 +27,8 @@ export default function DataSources() {
       // Invalidate dashboard data to show new metrics
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       
-      // Check if result is an array and count successes
-      let successCount = 0;
-      let totalCount = 0;
-      
-      if (Array.isArray(result)) {
-        totalCount = result.length;
-        successCount = result.filter((r: any) => r.success).length;
-      }
+      const successCount = result.filter((r: any) => r.success).length;
+      const totalCount = result.length;
       
       toast({
         title: "ETL Pipeline Completed",
